@@ -5,9 +5,11 @@ import { useRef, useState, useEffect } from "react";
 import { useWebGL } from "./hooks/useWebGL";
 import { useGeometry } from "./hooks/useGeometry";
 import { useRender } from "./hooks/useRender";
+import { useCameraControls } from "./hooks/useCameraControls";
 import { FileUpload } from "../ui/FileUpload";
-import { ViewerState, CameraState } from "./types";
 import { DebugOverlay } from "./DebugOverlay";
+import { ControlsOverlay } from "./ControlsOverlay";
+import { ViewerState, CameraState } from "./types";
 
 export function MoleculeViewer() {
   // Refs and state
@@ -22,11 +24,14 @@ export function MoleculeViewer() {
     isDragging: false,
     lastMousePos: { x: 0, y: 0 },
     mouseButton: null,
+    isPanning: false,
   });
   const [camera, setCamera] = useState<CameraState>({
     rotation: [0, 0],
     distance: 50,
     target: [0, 0, 0],
+    position: [0, 0, 0],
+    velocity: [0, 0, 0],
   });
 
   // Initialize WebGL context and setup
@@ -34,6 +39,9 @@ export function MoleculeViewer() {
 
   // Initialize geometry with extensions
   const { buffers, updateInstanceData } = useGeometry(gl, program, extensions);
+
+  // Initialize camera controls
+  const { pan, rotate, zoom, reset } = useCameraControls(camera, setCamera);
 
   // Initialize render loop
   useRender({
@@ -45,6 +53,8 @@ export function MoleculeViewer() {
     instanceCount: instanceData ? instanceData.length / 7 : 0,
     rotation: camera.rotation,
     distance: camera.distance,
+    position: camera.position,
+    target: camera.target,
   });
 
   // Debug mode keyboard shortcut
@@ -52,15 +62,51 @@ export function MoleculeViewer() {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key === "d" && e.ctrlKey) {
         setDebugMode((prev) => !prev);
-        console.log("Debug mode:", !debugMode);
+      } else if (e.key === "r" || e.key === "R") {
+        reset();
       }
     };
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [debugMode]);
+  }, [reset]);
 
-  // Handle window resize
+  // Keyboard controls for panning
+  useEffect(() => {
+    let keysPressed = new Set<string>();
+    const keySpeed = 1;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      keysPressed.add(e.key);
+
+      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
+        e.preventDefault();
+
+        let dx = 0,
+          dy = 0;
+        if (keysPressed.has("ArrowLeft")) dx += keySpeed;
+        if (keysPressed.has("ArrowRight")) dx -= keySpeed;
+        if (keysPressed.has("ArrowUp")) dy += keySpeed;
+        if (keysPressed.has("ArrowDown")) dy -= keySpeed;
+
+        pan(dx, dy);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      keysPressed.delete(e.key);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [pan]);
+
+  // Window resize handler
   useEffect(() => {
     if (!canvasRef.current || !gl) return;
 
@@ -68,49 +114,78 @@ export function MoleculeViewer() {
       const canvas = canvasRef.current;
       if (!canvas) return;
 
-      // Get the actual size from the container
       const displayWidth = canvas.clientWidth;
       const displayHeight = canvas.clientHeight;
 
-      // Check if the canvas size has actually changed
       if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
-        // Update canvas size to match display size
         canvas.width = displayWidth;
         canvas.height = displayHeight;
         gl.viewport(0, 0, displayWidth, displayHeight);
-        console.log("Canvas resized:", {
-          width: displayWidth,
-          height: displayHeight,
-        });
       }
     };
 
-    // Set initial size
     handleResize();
-
-    // Add event listener for window resize
     window.addEventListener("resize", handleResize);
-
-    // Cleanup
     return () => window.removeEventListener("resize", handleResize);
   }, [gl]);
 
-  // Handler for PDB data
+  // Mouse event handlers
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const isPanning = e.button === 1 || (e.button === 0 && e.shiftKey);
+    setViewerState((prev) => ({
+      ...prev,
+      isDragging: true,
+      lastMousePos: { x: e.clientX, y: e.clientY },
+      mouseButton: e.button,
+      isPanning,
+    }));
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    if (!viewerState.isDragging) return;
+
+    const dx = e.clientX - viewerState.lastMousePos.x;
+    const dy = e.clientY - viewerState.lastMousePos.y;
+
+    if (viewerState.isPanning) {
+      pan(dx, dy);
+    } else {
+      rotate(dx, dy);
+    }
+
+    setViewerState((prev) => ({
+      ...prev,
+      lastMousePos: { x: e.clientX, y: e.clientY },
+    }));
+  };
+
+  const handleMouseUp = () => {
+    setViewerState((prev) => ({
+      ...prev,
+      isDragging: false,
+      mouseButton: null,
+      isPanning: false,
+    }));
+  };
+
+  const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    zoom(e.deltaY);
+  };
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+  };
+
+  // PDB data handler
   const handlePDBData = (data: Float32Array) => {
     try {
-      console.log("Loading PDB data...", {
-        dataSize: data.byteLength,
-        atomCount: data.length / 7,
-      });
-
       setViewerState((prev) => ({ ...prev, isLoading: true, error: null }));
       setInstanceData(data);
       updateInstanceData(data);
-
-      console.log("PDB data loaded successfully", {
-        atoms: data.length / 7,
-        dataSize: data.byteLength,
-      });
+      reset(); // Reset camera when loading new molecule
     } catch (error) {
       console.error("Error loading PDB data:", error);
       setViewerState((prev) => ({
@@ -123,60 +198,6 @@ export function MoleculeViewer() {
     } finally {
       setViewerState((prev) => ({ ...prev, isLoading: false }));
     }
-  };
-
-  // Mouse event handlers
-  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    setViewerState((prev) => ({
-      ...prev,
-      isDragging: true,
-      lastMousePos: { x: e.clientX, y: e.clientY },
-      mouseButton: e.button,
-    }));
-  };
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    if (!viewerState.isDragging) return;
-
-    const dx = e.clientX - viewerState.lastMousePos.x;
-    const dy = e.clientY - viewerState.lastMousePos.y;
-
-    // Update camera rotation
-    setCamera((prev) => ({
-      ...prev,
-      rotation: [prev.rotation[0] + dy * 0.005, prev.rotation[1] + dx * 0.005],
-    }));
-
-    // Update last mouse position
-    setViewerState((prev) => ({
-      ...prev,
-      lastMousePos: { x: e.clientX, y: e.clientY },
-    }));
-  };
-
-  const handleMouseUp = () => {
-    setViewerState((prev) => ({
-      ...prev,
-      isDragging: false,
-      mouseButton: null,
-    }));
-  };
-
-  const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    const zoomFactor = 0.95;
-    const delta = e.deltaY > 0 ? zoomFactor : 1 / zoomFactor;
-
-    setCamera((prev) => ({
-      ...prev,
-      distance: Math.max(1, Math.min(100, prev.distance * delta)),
-    }));
-  };
-
-  const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
   };
 
   return (
@@ -203,13 +224,15 @@ export function MoleculeViewer() {
           camera: {
             rotation: camera.rotation,
             distance: camera.distance,
+            position: camera.position,
           },
         }}
       />
 
+      <ControlsOverlay isPanning={viewerState.isPanning} showControls={true} />
+
       <FileUpload onPDBLoad={handlePDBData} />
 
-      {/* Loading overlay */}
       {viewerState.isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50">
           <div className="bg-white p-4 rounded-lg shadow-lg">
@@ -221,7 +244,6 @@ export function MoleculeViewer() {
         </div>
       )}
 
-      {/* Error message */}
       {viewerState.error && (
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded shadow-lg max-w-md">
           <p className="font-semibold">Error</p>
@@ -229,7 +251,6 @@ export function MoleculeViewer() {
         </div>
       )}
 
-      {/* Debug mode indicator */}
       {debugMode && (
         <div className="absolute bottom-4 left-4 text-white text-sm bg-black/50 px-2 py-1 rounded">
           Debug Mode (Ctrl+D to toggle)
