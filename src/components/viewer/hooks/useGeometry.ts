@@ -27,66 +27,106 @@ export const useGeometry = (
     numVertices: 0,
   });
 
+  // Initialize buffers
   useEffect(() => {
-    if (!gl || !program || !extensions.instancedArrays) return;
-
-    // Create sphere with more segments for better quality
-    const sphere = createSphereGeometry(1.0, 32);
-
-    // Create buffers
-    const position = gl.createBuffer();
-    const normal = gl.createBuffer();
-    const index = gl.createBuffer();
-    const instance = gl.createBuffer();
-
-    if (!position || !normal || !index || !instance) {
-      console.error("Failed to create buffers");
+    if (!gl || !program) {
+      console.log("WebGL context or program not ready");
       return;
     }
 
-    // Upload position data
-    gl.bindBuffer(gl.ARRAY_BUFFER, position);
-    gl.bufferData(gl.ARRAY_BUFFER, sphere.positions, gl.STATIC_DRAW);
+    console.log("Initializing geometry buffers");
 
-    // Upload normal data
-    gl.bindBuffer(gl.ARRAY_BUFFER, normal);
-    gl.bufferData(gl.ARRAY_BUFFER, sphere.normals, gl.STATIC_DRAW);
+    try {
+      // Create sphere geometry
+      const sphere = createSphereGeometry(1.0, 32);
+      console.log("Sphere geometry created:", {
+        vertices: sphere.positions.length / 3,
+        indices: sphere.indices.length,
+      });
 
-    // Upload index data
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, sphere.indices, gl.STATIC_DRAW);
+      // Create buffers
+      const position = gl.createBuffer();
+      const normal = gl.createBuffer();
+      const index = gl.createBuffer();
+      const instance = gl.createBuffer();
 
-    // Store buffer information
-    buffers.current = {
-      position,
-      normal,
-      index,
-      instance,
-      numIndices: sphere.indices.length,
-      numVertices: sphere.positions.length / 3,
-    };
+      if (!position || !normal || !index || !instance) {
+        throw new Error("Failed to create buffers");
+      }
 
-    console.log("Buffer sizes:", {
-      numIndices: buffers.current.numIndices,
-      numVertices: buffers.current.numVertices,
-    });
+      // Upload sphere geometry data
+      gl.bindBuffer(gl.ARRAY_BUFFER, position);
+      gl.bufferData(gl.ARRAY_BUFFER, sphere.positions, gl.STATIC_DRAW);
 
+      gl.bindBuffer(gl.ARRAY_BUFFER, normal);
+      gl.bufferData(gl.ARRAY_BUFFER, sphere.normals, gl.STATIC_DRAW);
+
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index);
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, sphere.indices, gl.STATIC_DRAW);
+
+      // Initialize instance buffer with empty data
+      gl.bindBuffer(gl.ARRAY_BUFFER, instance);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(0), gl.DYNAMIC_DRAW);
+
+      buffers.current = {
+        position,
+        normal,
+        index,
+        instance,
+        numIndices: sphere.indices.length,
+        numVertices: sphere.positions.length / 3,
+      };
+
+      console.log("Buffers initialized successfully", {
+        numIndices: buffers.current.numIndices,
+        numVertices: buffers.current.numVertices,
+      });
+    } catch (error) {
+      console.error("Error initializing buffers:", error);
+    }
+
+    // Cleanup
     return () => {
       if (!gl) return;
-      [position, normal, index, instance].forEach((buffer) => {
-        if (buffer) gl.deleteBuffer(buffer);
-      });
+      try {
+        Object.values(buffers.current).forEach((buffer) => {
+          if (buffer && typeof buffer !== "number") {
+            gl.deleteBuffer(buffer);
+          }
+        });
+        buffers.current = {
+          position: null,
+          normal: null,
+          index: null,
+          instance: null,
+          numIndices: 0,
+          numVertices: 0,
+        };
+      } catch (error) {
+        console.error("Error cleaning up buffers:", error);
+      }
     };
-  }, [gl, program, extensions.instancedArrays]);
+  }, [gl, program]);
 
+  // Update instance data
   const updateInstanceData = (data: Float32Array) => {
-    if (!gl || !buffers.current.instance) return;
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.current.instance);
-    gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
-    console.log("Instance data updated:", {
-      instanceCount: data.length / 7,
-      dataSize: data.byteLength,
-    });
+    if (!gl || !buffers.current.instance) {
+      console.error(
+        "Cannot update instance data: WebGL or buffer not initialized"
+      );
+      return;
+    }
+
+    try {
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffers.current.instance);
+      gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
+      console.log("Instance data updated", {
+        dataLength: data.length,
+        numInstances: data.length / 7,
+      });
+    } catch (error) {
+      console.error("Error updating instance data:", error);
+    }
   };
 
   return {

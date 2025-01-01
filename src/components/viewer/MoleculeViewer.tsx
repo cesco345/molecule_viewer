@@ -1,6 +1,6 @@
 "use client";
-// src/components/viewer/MoleculeViewer.tsx
-
+import { useAtomSelection } from "./hooks/useAtomSelection";
+import { Matrix4 } from "./utils/matrix";
 import { useRef, useState, useEffect } from "react";
 import { useWebGL } from "./hooks/useWebGL";
 import { useGeometry } from "./hooks/useGeometry";
@@ -13,6 +13,7 @@ import { ViewerState, CameraState } from "./types";
 
 export function MoleculeViewer() {
   // Refs and state
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [instanceData, setInstanceData] = useState<Float32Array | null>(null);
   const [debugMode, setDebugMode] = useState(
@@ -33,7 +34,62 @@ export function MoleculeViewer() {
     position: [0, 0, 0],
     velocity: [0, 0, 0],
   });
+  const { selectedAtom, selectAtomAtPosition } = useAtomSelection(
+    camera,
+    setCamera
+  );
+  const handleDoubleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    console.log("Double click detected");
 
+    if (!instanceData || !gl || !canvasRef.current) {
+      console.log("Missing required data:", {
+        hasInstanceData: !!instanceData,
+        hasGL: !!gl,
+        hasCanvas: !!canvasRef.current,
+      });
+      return;
+    }
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    console.log("Click coordinates:", { x, y });
+
+    // Create view and projection matrices
+    const projection = new Matrix4();
+    projection.perspective(
+      Math.PI / 4,
+      canvasRef.current.width / canvasRef.current.height,
+      0.1,
+      1000.0
+    );
+
+    const view = new Matrix4();
+    view
+      .identity()
+      .translate(camera.position[0], camera.position[1], camera.position[2])
+      .translate(0, 0, -camera.distance)
+      .rotateX(camera.rotation[0])
+      .rotateY(camera.rotation[1])
+      .translate(-camera.target[0], -camera.target[1], -camera.target[2]);
+
+    console.log("Camera state:", {
+      position: camera.position,
+      rotation: camera.rotation,
+      distance: camera.distance,
+      target: camera.target,
+    });
+
+    selectAtomAtPosition(
+      x,
+      y,
+      canvasRef.current,
+      instanceData,
+      projection,
+      view
+    );
+  };
   // Initialize WebGL context and setup
   const { gl, program, locations, extensions } = useWebGL(canvasRef.current);
 
@@ -211,6 +267,7 @@ export function MoleculeViewer() {
         onMouseLeave={handleMouseUp}
         onWheel={handleWheel}
         onContextMenu={handleContextMenu}
+        onDoubleClick={handleDoubleClick}
       />
 
       <DebugOverlay
@@ -230,6 +287,11 @@ export function MoleculeViewer() {
       />
 
       <ControlsOverlay isPanning={viewerState.isPanning} showControls={true} />
+      {selectedAtom && (
+        <div className="absolute top-4 left-4 bg-black/70 text-white px-3 py-2 rounded">
+          Selected Atom {selectedAtom.index + 1}
+        </div>
+      )}
 
       <FileUpload onPDBLoad={handlePDBData} />
 
