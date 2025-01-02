@@ -1,19 +1,11 @@
 // src/components/viewer/hooks/useWebGL.ts
 
 import { useEffect, useState } from "react";
-import { WebGLSetup } from "../types";
+import { WebGLSetup, WebGLLocations } from "../types";
 import { vertexShaderSource, fragmentShaderSource } from "../utils/shaders";
 
-interface WebGLExtensions {
-  instancedArrays: ANGLE_instanced_arrays | null;
-}
-
-export const useWebGL = (
-  canvas: HTMLCanvasElement | null
-): WebGLSetup & { extensions: WebGLExtensions } => {
-  const [setup, setSetup] = useState<
-    WebGLSetup & { extensions: WebGLExtensions }
-  >({
+export const useWebGL = (canvas: HTMLCanvasElement | null): WebGLSetup => {
+  const [setup, setSetup] = useState<WebGLSetup>({
     gl: null,
     program: null,
     locations: null,
@@ -23,7 +15,13 @@ export const useWebGL = (
   });
 
   useEffect(() => {
-    if (!canvas) return;
+    if (!canvas) {
+      console.log("Canvas not available yet");
+      return;
+    }
+
+    let isActive = true;
+    console.log("Initializing WebGL context");
 
     // Initialize WebGL context
     const gl = canvas.getContext("webgl", {
@@ -34,7 +32,7 @@ export const useWebGL = (
     });
 
     if (!gl) {
-      console.error("WebGL not supported");
+      console.error("WebGL not available");
       return;
     }
 
@@ -65,66 +63,84 @@ export const useWebGL = (
       return;
     }
 
+    gl.useProgram(program);
+
     // Get attribute and uniform locations
-    const locations = {
+    const locations: WebGLLocations = {
       attributes: {
         position: gl.getAttribLocation(program, "position"),
         normal: gl.getAttribLocation(program, "normal"),
         instancePosition: gl.getAttribLocation(program, "instancePosition"),
         instanceColor: gl.getAttribLocation(program, "instanceColor"),
         instanceRadius: gl.getAttribLocation(program, "instanceRadius"),
+        color: gl.getAttribLocation(program, "color"),
       },
       uniforms: {
         modelViewMatrix: gl.getUniformLocation(program, "modelViewMatrix"),
         projectionMatrix: gl.getUniformLocation(program, "projectionMatrix"),
+        viewMode: gl.getUniformLocation(program, "viewMode"),
       },
     };
 
-    // Verify all locations were found
-    const missingAttributes = Object.entries(locations.attributes)
-      .filter(([_, location]) => location === -1)
-      .map(([name]) => name);
-
-    const missingUniforms = Object.entries(locations.uniforms)
-      .filter(([_, location]) => location === null)
-      .map(([name]) => name);
-
-    if (missingAttributes.length > 0) {
-      console.error("Missing attributes:", missingAttributes);
-      return;
-    }
-
-    if (missingUniforms.length > 0) {
-      console.error("Missing uniforms:", missingUniforms);
-      return;
-    }
-
-    // Enable WebGL features
-    gl.enable(gl.DEPTH_TEST);
-    gl.enable(gl.CULL_FACE);
-    gl.cullFace(gl.BACK);
-
-    setSetup({
-      gl,
-      program,
-      locations,
-      extensions: {
-        instancedArrays,
-      },
+    // Verify locations
+    console.log("Shader locations:", {
+      attributes: Object.entries(locations.attributes).map(
+        ([name, loc]) => `${name}: ${loc}`
+      ),
+      uniforms: Object.entries(locations.uniforms).map(
+        ([name, loc]) => `${name}: ${loc !== null}`
+      ),
     });
 
-    // Cleanup function
-    return () => {
-      if (!gl) return;
+    // Enable depth testing
+    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.CULL_FACE);
 
-      if (program) {
-        gl.deleteProgram(program);
-      }
-      if (vertexShader) {
-        gl.deleteShader(vertexShader);
-      }
-      if (fragmentShader) {
-        gl.deleteShader(fragmentShader);
+    if (isActive) {
+      setSetup({
+        gl,
+        program,
+        locations,
+        extensions: {
+          instancedArrays,
+        },
+      });
+    }
+
+    console.log("WebGL initialization complete");
+
+    return () => {
+      isActive = false;
+
+      if (gl) {
+        // Cleanup WebGL resources
+        if (program) {
+          gl.deleteProgram(program);
+        }
+        if (vertexShader) {
+          gl.deleteShader(vertexShader);
+        }
+        if (fragmentShader) {
+          gl.deleteShader(fragmentShader);
+        }
+
+        // Disable vertex attribute arrays
+        for (const key in locations.attributes) {
+          gl.disableVertexAttribArray(locations.attributes[key]);
+        }
+
+        // Reset context
+        const loseContext = gl.getExtension("WEBGL_lose_context");
+        if (loseContext) {
+          loseContext.loseContext();
+        }
+
+        setSetup({
+          gl: null,
+          program: null,
+          locations: null,
+          extensions: { instancedArrays: null },
+        });
       }
     };
   }, [canvas]);
@@ -152,6 +168,11 @@ function createShader(
     return null;
   }
 
+  console.log(
+    `${
+      type === gl.VERTEX_SHADER ? "Vertex" : "Fragment"
+    } shader compiled successfully`
+  );
   return shader;
 }
 
@@ -176,5 +197,6 @@ function createProgram(
     return null;
   }
 
+  console.log("Program linked successfully");
   return program;
 }

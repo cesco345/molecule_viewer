@@ -14,17 +14,21 @@ export function DebugOverlay({
     camera: {
       rotation: [number, number];
       distance: number;
+      position: [number, number, number];
     };
   };
 }) {
   if (!isVisible) return null;
 
   return (
-    <div className="absolute top-0 left-0 bg-black/70 text-white p-4 font-mono text-sm">
+    <div className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/70 text-white p-4 font-mono text-sm rounded-lg shadow-lg">
       <h3 className="font-bold mb-2">Debug Info</h3>
       <pre className="whitespace-pre-wrap">
         {JSON.stringify(stats, null, 2)}
       </pre>
+      <div className="mt-2 text-xs text-gray-400">
+        Press Ctrl+D to toggle debug view
+      </div>
     </div>
   );
 }

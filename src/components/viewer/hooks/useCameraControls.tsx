@@ -1,12 +1,19 @@
+// useCameraControls.ts
 import { useCallback, useRef, useEffect } from "react";
 import { CameraState } from "../types";
 
 const MOMENTUM_DECAY = 0.95;
 const MIN_VELOCITY = 0.001;
 
+interface Bounds {
+  min: [number, number, number];
+  max: [number, number, number];
+}
+
 export function useCameraControls(
   camera: CameraState,
-  setCamera: React.Dispatch<React.SetStateAction<CameraState>>
+  setCamera: React.Dispatch<React.SetStateAction<CameraState>>,
+  bounds?: Bounds
 ) {
   const momentumFrame = useRef<number>();
 
@@ -18,8 +25,8 @@ export function useCameraControls(
         number,
         number
       ];
-      const hasMovement = newVelocity.some((v) => Math.abs(v) > MIN_VELOCITY);
 
+      const hasMovement = newVelocity.some((v) => Math.abs(v) > MIN_VELOCITY);
       if (!hasMovement) {
         if (momentumFrame.current) {
           cancelAnimationFrame(momentumFrame.current);
@@ -43,7 +50,6 @@ export function useCameraControls(
         velocity: newVelocity,
       };
     });
-
     momentumFrame.current = requestAnimationFrame(updateMomentum);
   }, [setCamera]);
 
@@ -56,7 +62,6 @@ export function useCameraControls(
         const sinX = Math.sin(prev.rotation[0]);
         const cosY = Math.cos(prev.rotation[1]);
         const sinY = Math.sin(prev.rotation[1]);
-
         const deltaX = (-dx * cosY + dy * sinX * sinY) * scale;
         const deltaY = -dy * cosX * scale;
         const deltaZ = (-dx * sinY - dy * sinX * cosY) * scale;
@@ -94,7 +99,6 @@ export function useCameraControls(
     (delta: number) => {
       const zoomFactor = 0.95;
       const factor = delta > 0 ? zoomFactor : 1 / zoomFactor;
-
       setCamera((prev) => ({
         ...prev,
         distance: Math.max(1, Math.min(100, prev.distance * factor)),
@@ -104,21 +108,49 @@ export function useCameraControls(
     [setCamera]
   );
 
-  // Reset camera to initial position
+  // Reset camera to frame the molecule
   const reset = useCallback(() => {
-    setCamera({
-      rotation: [0, 0],
-      distance: 50,
-      target: [0, 0, 0],
-      position: [0, 0, 0],
-      velocity: [0, 0, 0],
-    });
+    if (bounds) {
+      // Calculate center of the molecule
+      const center: [number, number, number] = [
+        (bounds.max[0] + bounds.min[0]) / 2,
+        (bounds.max[1] + bounds.min[1]) / 2,
+        (bounds.max[2] + bounds.min[2]) / 2,
+      ];
+
+      // Calculate appropriate distance based on molecule size
+      const size = Math.max(
+        bounds.max[0] - bounds.min[0],
+        bounds.max[1] - bounds.min[1],
+        bounds.max[2] - bounds.min[2]
+      );
+
+      // Set distance to ensure molecule fits in view
+      const distance = size * 1.5; // Adjust multiplier as needed for better framing
+
+      setCamera({
+        rotation: [0, 0],
+        distance: distance,
+        target: center,
+        position: center,
+        velocity: [0, 0, 0],
+      });
+    } else {
+      // Fallback to default values if no bounds available
+      setCamera({
+        rotation: [0, 0],
+        distance: 50,
+        target: [0, 0, 0],
+        position: [0, 0, 0],
+        velocity: [0, 0, 0],
+      });
+    }
 
     if (momentumFrame.current) {
       cancelAnimationFrame(momentumFrame.current);
       momentumFrame.current = undefined;
     }
-  }, [setCamera]);
+  }, [setCamera, bounds]);
 
   // Clean up animation frame on unmount
   useEffect(() => {

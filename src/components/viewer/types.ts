@@ -1,3 +1,15 @@
+export enum ViewMode {
+  SPHERES = "spheres",
+  RIBBON = "ribbon",
+}
+export interface AtomInfo {
+  index: number;
+  position: [number, number, number];
+  residueName: string; // Three letter amino acid code
+  atomName: string; // Atom name (e.g., CA, CB, N, O)
+  residueNumber: number; // Residue sequence number
+  chain: string; // Chain identifier
+}
 export interface ViewerState {
   isLoading: boolean;
   error: string | null;
@@ -5,6 +17,7 @@ export interface ViewerState {
   lastMousePos: { x: number; y: number };
   mouseButton: number | null;
   isPanning: boolean;
+  viewMode: ViewMode;
 }
 
 export interface CameraState {
@@ -22,10 +35,12 @@ export interface WebGLLocations {
     instancePosition: number;
     instanceColor: number;
     instanceRadius: number;
+    color: number; // Added for ribbon mode
   };
   uniforms: {
     modelViewMatrix: WebGLUniformLocation | null;
     projectionMatrix: WebGLUniformLocation | null;
+    viewMode: WebGLUniformLocation | null;
   };
 }
 
