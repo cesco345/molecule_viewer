@@ -1,6 +1,216 @@
-# Molecule Viewer
+# Development Workflow - Molecule Viewer
 
 A modern, WebGL-based molecular visualization tool built with Next.js and TypeScript. This application allows users to view and interact with protein structures in both sphere and ribbon representations.
+
+## Phase 1: Project Setup and Basic Structure
+
+1. Initialize Next.js project with TypeScript
+
+   ```bash
+   npx create-next-app@latest molecule-viewer --typescript
+   ```
+
+2. Add required dependencies
+
+   ```bash
+   pnpm add @types/three three @react-three/fiber @react-three/drei
+   ```
+
+3. Set up project directory structure
+   ```
+   src/
+   ├── app/
+   ├── components/
+   │   ├── ui/
+   │   └── viewer/
+   └── lib/
+   ```
+
+## Phase 2: Core WebGL Implementation
+
+1. Create basic WebGL context setup (useWebGL.ts)
+
+   - Initialize WebGL context
+   - Create shader programs
+   - Set up attribute locations
+
+2. Implement basic geometry utilities (geometry.ts)
+
+   - Create sphere geometry for atoms
+   - Set up vertex and index buffers
+
+3. Develop matrix math utilities (matrix.ts)
+   - Implement Matrix4 class
+   - Add transformation methods
+
+## Phase 3: PDB File Handling
+
+1. Create PDB parser (pdbParser.ts)
+
+   - Parse atomic coordinates
+   - Extract atom information
+   - Handle different record types
+
+2. Implement file upload component
+   - Create FileUpload.tsx
+   - Add drag-and-drop support
+   - Handle file reading
+
+## Phase 4: Molecule Rendering
+
+1. Set up sphere rendering for atoms
+
+   - Implement instanced rendering
+   - Add proper atom colors
+   - Set up van der Waals radii
+
+2. Create camera controls
+
+   - Implement rotation
+   - Add panning
+   - Set up zooming
+   - Add momentum
+
+3. Add basic lighting
+   - Implement Phong shading
+   - Set up normal calculations
+   - Add ambient and diffuse lighting
+
+## Phase 5: User Interface
+
+1. Create basic viewer layout
+
+   - Set up canvas container
+   - Add overlay components
+   - Position UI elements
+
+2. Implement control overlays
+
+   - Add ViewModeToggle
+   - Create DebugOverlay
+   - Add ControlsOverlay
+
+3. Add keyboard shortcuts
+   - Reset view ('R' key)
+   - Debug mode (Ctrl + 'D')
+   - Arrow key navigation
+
+## Phase 6: Ribbon Visualization
+
+1. Implement secondary structure detection
+
+   - Analyze backbone atoms
+   - Detect helices and sheets
+   - Identify coil regions
+
+2. Create ribbon geometry generation
+
+   - Implement spline calculations
+   - Generate vertex data
+   - Create proper normals
+
+3. Add ribbon rendering
+   - Set up ribbon shaders
+   - Implement proper coloring
+   - Add smooth transitions
+
+## Phase 7: Interaction Features
+
+1. Add atom selection
+
+   - Implement ray casting
+   - Create selection highlight
+   - Show atom information
+
+2. Add view centering
+   - Calculate molecule bounds
+   - Implement auto-centering
+   - Add reset functionality
+
+## Phase 8: Performance Optimization
+
+1. Optimize rendering
+
+   - Implement geometry instancing
+   - Add buffer caching
+   - Optimize draw calls
+
+2. Improve PDB parsing
+   - Add efficient data structures
+   - Optimize parsing algorithm
+   - Add error handling
+
+## Phase 9: Polish and Debugging
+
+1. Add error handling
+
+   - File loading errors
+   - WebGL context errors
+   - Parsing errors
+
+2. Implement debug features
+
+   - Add FPS counter
+   - Show buffer statistics
+   - Add camera information
+
+3. Final testing and fixes
+   - Cross-browser testing
+   - Performance testing
+   - Bug fixes
+
+## Phase 10: Documentation
+
+1. Create documentation
+
+   - Write README.md
+   - Add code comments
+   - Create usage instructions
+
+2. Add type definitions
+   - Define interfaces
+   - Add TypeScript types
+   - Document type usage
+
+## Key Development Decisions
+
+1. Technology Choices:
+
+   - Next.js for modern React features and good TypeScript support
+   - Raw WebGL instead of Three.js for better control and learning
+   - TypeScript for type safety and better development experience
+
+2. Architecture Decisions:
+
+   - Custom hooks for logic separation
+   - Component-based UI structure
+   - Utility-based approach for core functionality
+
+3. Performance Considerations:
+   - Use of WebGL instancing
+   - Efficient data structures
+   - Optimized rendering loops
+
+## Challenges and Solutions
+
+1. WebGL Setup
+
+   - Challenge: Complex WebGL boilerplate
+   - Solution: Created custom hooks for WebGL context management
+
+2. Ribbon Visualization
+
+   - Challenge: Complex geometry generation
+   - Solution: Implemented spline-based approach with proper normals
+
+3. Performance
+
+   - Challenge: Handling large molecules
+   - Solution: Used instancing and efficient buffer management
+
+4. User Interaction
+   - Challenge: Smooth camera controls
+   - Solution: Implemented momentum-based movement and proper event handling# Molecule Viewer
 
 ## Features
 
