@@ -12,9 +12,7 @@ A modern, WebGL-based molecular visualization tool built with Next.js and TypeSc
 
 2. Add required dependencies
 
-   ```bash
-   pnpm add @types/three three @react-three/fiber @react-three/drei
-   ```
+   add tailwind, typescript, nextjs app router configuration
 
 3. Set up project directory structure
    ```
@@ -177,7 +175,7 @@ A modern, WebGL-based molecular visualization tool built with Next.js and TypeSc
 1. Technology Choices:
 
    - Next.js for modern React features and good TypeScript support
-   - Raw WebGL instead of Three.js for better control and learning
+   - Raw WebGL instead of Three.js and/or Fiber for better control and learning/teaching of important GL concepts
    - TypeScript for type safety and better development experience
 
 2. Architecture Decisions:
@@ -210,19 +208,18 @@ A modern, WebGL-based molecular visualization tool built with Next.js and TypeSc
 
 4. User Interaction
    - Challenge: Smooth camera controls
-   - Solution: Implemented momentum-based movement and proper event handling# Molecule Viewer
+   - Solution: Implemented momentum-based movement and proper event handling
 
 ## Features
 
 - **Multiple Visualization Modes**
   - Sphere mode: Atoms represented as spheres with proper van der Waals radii
-  - Ribbon mode: Professional protein backbone visualization similar to PyMOL/Chimera
+  - Ribbon mode: Professional protein backbone visualization aiming for a PyMOL/Chimera feel
 - **Interactive Controls**
 
   - Rotate: Left-click and drag
   - Pan: Middle-click or Shift + left-click and drag
   - Zoom: Mouse wheel
-  - Reset View: 'R' key
   - Debug Mode: Ctrl + 'D'
 
 - **PDB File Support**
