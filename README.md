@@ -1,36 +1,173 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Molecule Viewer
 
-## Getting Started
+A modern, WebGL-based molecular visualization tool built with Next.js and TypeScript. This application allows users to view and interact with protein structures in both sphere and ribbon representations.
 
-First, run the development server:
+## Features
+
+- **Multiple Visualization Modes**
+  - Sphere mode: Atoms represented as spheres with proper van der Waals radii
+  - Ribbon mode: Professional protein backbone visualization similar to PyMOL/Chimera
+- **Interactive Controls**
+
+  - Rotate: Left-click and drag
+  - Pan: Middle-click or Shift + left-click and drag
+  - Zoom: Mouse wheel
+  - Reset View: 'R' key
+  - Debug Mode: Ctrl + 'D'
+
+- **PDB File Support**
+
+  - Upload and parse PDB files
+  - Automatic molecule centering
+  - Secondary structure detection
+
+- **Real-time Rendering**
+  - Hardware-accelerated WebGL rendering
+  - Smooth camera controls
+  - Efficient geometry instancing
+
+## Prerequisites
+
+- Node.js (v18 or higher)
+- pnpm (recommended) or npm
+
+## Installation
+
+1. Clone the repository:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repository-url>
+cd molecule-viewer
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+pnpm install
+# or
+npm install
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. Start the development server:
 
-## Learn More
+```bash
+pnpm dev
+# or
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+4. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+├── app/                    # Next.js app directory
+│   ├── layout.tsx         # Root layout
+│   └── page.tsx           # Main page component
+├── components/
+│   ├── ui/                # Generic UI components
+│   │   └── FileUpload.tsx # PDB file upload component
+│   └── viewer/            # Molecule viewer components
+│       ├── hooks/         # Custom React hooks
+│       │   ├── useAtomSelection.ts
+│       │   ├── useCameraControls.tsx
+│       │   ├── useGeometry.ts
+│       │   ├── useRender.ts
+│       │   └── useWebGL.ts
+│       ├── utils/         # Utility functions
+│       │   ├── geometry.ts
+│       │   ├── matrix.ts
+│       │   ├── pdbParser.ts
+│       │   ├── raycast.ts
+│       │   ├── ribbonGeometry.ts
+│       │   └── shaders.ts
+│       └── ...            # Various viewer components
+└── lib/                   # Library code
+    └── pdb/              # PDB parsing utilities
+```
 
-## Deploy on Vercel
+## Technical Details
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### WebGL Implementation
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The viewer uses custom WebGL shaders and geometry generation for efficient rendering:
+
+- **Sphere Mode**: Uses instanced rendering for efficient atom visualization
+- **Ribbon Mode**: Generates smooth spline-based geometry for protein backbone
+- **Lighting**: Phong shading model with ambient, diffuse, and specular components
+
+### Data Processing
+
+- **PDB Parsing**: Custom parser handles atomic coordinates and structure information
+- **Secondary Structure**: Analyzes protein backbone for helix/sheet/coil determination
+- **Geometry Generation**: Dynamic creation of sphere instances and ribbon geometry
+
+## Usage
+
+1. Launch the application
+2. Use the file upload button to load a PDB file
+3. Toggle between sphere and ribbon modes using the view mode toggle
+4. Interact with the molecule using mouse controls
+5. Use keyboard shortcuts for additional functions
+
+### Camera Controls
+
+- **Rotation**: Click and drag with left mouse button
+- **Panning**: Hold Shift + left mouse button or middle mouse button
+- **Zooming**: Mouse wheel
+- **Reset**: Press 'R' key
+
+### Keyboard Shortcuts
+
+- `R`: Reset camera view
+- `Ctrl + D`: Toggle debug overlay
+- Arrow keys: Fine camera panning
+
+## Development
+
+### Adding New Features
+
+1. Create new components in appropriate directories
+2. Add hooks in `hooks/` directory
+3. Update utility functions as needed
+4. Modify shaders in `shaders.ts` for new rendering features
+
+### Building for Production
+
+```bash
+pnpm build
+# or
+npm run build
+```
+
+## Performance Considerations
+
+- Uses WebGL instancing for efficient atom rendering
+- Implements geometry caching for ribbon mode
+- Optimizes camera controls for smooth interaction
+- Employs efficient PDB parsing algorithms
+
+## Browser Support
+
+- Requires WebGL support
+- Tested on modern browsers (Chrome, Firefox, Safari, Edge)
+- Mobile support with touch controls
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit changes
+4. Push to the branch
+5. Create a Pull Request
+
+## License
+
+[MIT License](LICENSE)
+
+## Acknowledgments
+
+- Inspired by professional molecular visualization tools like PyMOL and Chimera
+- Uses concepts from computational structural biology
+- Built with modern web technologies
